@@ -221,16 +221,16 @@ function parseTab(rows, code) {
   const metrics = [], initiatives = [], streams = [], tradeBars = [];
   let block = null;
   const SKIP = ['label','title','name','partner name','value','description','py value','% change','$ change','status','tag'];
+  const BLOCKS = ['METRICS','INITIATIVES','STREAMS','PARTNERS'];
 
   for (const row of rows) {
     const a  = clean(row[0]);
     const au = a.toUpperCase().replace(/\s+/g,' ');
     if (!a) continue;
 
-    if (au === 'METRICS')     { block = 'METRICS';     continue; }
-    if (au === 'INITIATIVES') { block = 'INITIATIVES'; continue; }
-    if (au === 'STREAMS')     { block = 'STREAMS';     continue; }
-    if (au === 'PARTNERS')    { block = 'PARTNERS';    continue; }
+    // handle "METRICS Label" merged into one cell by Sheets
+    const detectedBlock = BLOCKS.find(b => au.startsWith(b));
+    if (detectedBlock) { block = detectedBlock; continue; }
     if (SKIP.includes(a.toLowerCase())) continue;
 
     if (block === 'METRICS') {
