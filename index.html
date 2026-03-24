@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APAC Territory QBR Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f6f2;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.09);
+    --border-med: rgba(0,0,0,0.14);
+    --text: #1a1917;
+    --text-muted: #6b6960;
+    --text-faint: #9e9b93;
+    --accent: #1a52e8;
+    --accent-bg: #edf1fd;
+    --accent-text: #1a3fa8;
+    --green: #0e7c55;
+    --green-bg: #e6f5ee;
+    --red: #c0392b;
+    --red-bg: #fdecea;
+    --amber: #a05c0a;
+    --amber-bg: #fdf3e3;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .shell { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* Loading */
+  .loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; }
+  .loading-spinner { width: 32px; height: 32px; border: 2px solid var(--border-med); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text-faint); }
+
+  /* Error */
+  .error-box { background: var(--red-bg); border: 1px solid rgba(192,57,43,0.3); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; color: var(--red); font-size: 13px; line-height: 1.7; margin-top: 2rem; }
+  .error-box strong { display: block; margin-bottom: 4px; font-size: 14px; font-weight: 500; }
+
+  /* Header */
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+  .eyebrow { font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 4px; }
+  .page-title { font-size: 22px; font-weight: 500; color: var(--text); letter-spacing: -0.02em; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .quarter-row { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+  .q-btn { font-family: 'DM Mono', monospace; font-size: 11px; padding: 5px 11px; border: 1px solid var(--border-med); border-radius: var(--radius); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  .q-btn:hover { background: var(--surface2); }
+  .q-btn.active { background: var(--accent-bg); color: var(--accent-text); border-color: transparent; font-weight: 500; }
+  .refresh-btn { font-size: 11px; padding: 4px 10px; border: 1px solid var(--border-med); border-radius: var(--radius); background: transparent; color: var(--text-faint); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; display: flex; align-items: center; gap: 5px; }
+  .refresh-btn:hover { background: var(--surface2); color: var(--text-muted); }
+  .refresh-icon { display: inline-block; }
+  .refresh-btn.spinning .refresh-icon { animation: spin 0.7s linear infinite; }
+
+  /* Country tabs */
+  .country-tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .c-tab { font-size: 13px; font-weight: 400; padding: 7px 15px; border-radius: var(--radius); border: 1px solid var(--border); cursor: pointer; background: var(--surface); color: var(--text-muted); display: flex; align-items: center; gap: 7px; transition: all 0.15s; }
+  .c-tab:hover { border-color: var(--border-med); color: var(--text); }
+  .c-tab.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .c-tab .flag { font-size: 16px; }
+
+  /* Section nav */
+  .section-nav { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+  .s-tab { font-size: 13px; font-weight: 400; padding: 9px 18px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; position: relative; transition: color 0.15s; }
+  .s-tab:hover { color: var(--text); }
+  .s-tab.active { color: var(--text); font-weight: 500; }
+  .s-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--text); border-radius: 2px 2px 0 0; }
+
+  /* Metric cards */
+  .metric-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
+  .metric-label { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); margin-bottom: 8px; }
+  .metric-val { font-size: 21px; font-weight: 500; letter-spacing: -0.02em; color: var(--text); }
+  .metric-py { font-size: 11px; color: var(--text-faint); margin-top: 3px; font-family: 'DM Mono', monospace; }
+  .metric-deltas { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+  .delta-pill { font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 20px; font-family: 'DM Mono', monospace; }
+  .delta-up { background: var(--green-bg); color: var(--green); }
+  .delta-down { background: var(--red-bg); color: var(--red); }
+
+  /* Two col */
+  .two-col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; }
+  .card-title { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); margin-bottom: 14px; }
+
+  /* Trade bars */
+  .trade-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .trade-bar-label { font-size: 12px; color: var(--text-muted); width: 90px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trade-bar-track { flex: 1; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .trade-bar-fill { height: 100%; border-radius: 3px; background: var(--accent); }
+  .trade-bar-val { font-size: 12px; font-weight: 500; color: var(--text); width: 60px; text-align: right; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+
+  /* Initiatives */
+  .initiative-list { display: flex; flex-direction: column; gap: 8px; }
+  .init-item { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color 0.15s; }
+  .init-item:hover { border-color: var(--border-med); }
+  .init-header { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; cursor: pointer; user-select: none; }
+  .init-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .init-text { font-size: 13px; color: var(--text); font-weight: 500; }
+  .init-meta { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+  .init-chevron { font-size: 10px; color: var(--text-faint); margin-left: 6px; margin-top: 3px; transition: transform 0.2s; flex-shrink: 0; }
+  .init-chevron.open { transform: rotate(180deg); }
+  .init-status-wrap { margin-left: auto; flex-shrink: 0; }
+  .init-status-select { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; border: none; cursor: pointer; appearance: none; -webkit-appearance: none; outline: none; font-family: 'DM Sans', sans-serif; }
+  .init-status-select.status-live { background: var(--green-bg); color: var(--green); }
+  .init-status-select.status-progress { background: var(--accent-bg); color: var(--accent-text); }
+  .init-status-select.status-plan { background: var(--amber-bg); color: var(--amber); }
+  .init-status-select.status-done { background: var(--surface2); color: var(--text-faint); }
+  .init-status-select.status-paused { background: var(--red-bg); color: var(--red); }
+  .init-body { display: none; padding: 0 13px 13px 30px; border-top: 1px solid var(--border); }
+  .init-body.open { display: block; }
+  .init-notes-label { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); margin-bottom: 6px; margin-top: 10px; }
+  .init-notes { width: 100%; min-height: 72px; resize: vertical; font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--text); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; line-height: 1.6; outline: none; transition: border-color 0.15s; }
+  .init-notes:focus { border-color: var(--accent); background: var(--surface); }
+  .init-notes::placeholder { color: var(--text-faint); }
+
+  /* Streams */
+  .stream-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .stream-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; transition: border-color 0.15s; }
+  .stream-card:hover { border-color: var(--border-med); }
+  .stream-icon { width: 30px; height: 30px; border-radius: var(--radius); margin-bottom: 10px; }
+  .stream-name { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+  .stream-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+  .stream-tag { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; margin-top: 8px; font-weight: 500; font-family: 'DM Mono', monospace; background: var(--surface2); color: var(--text-muted); }
+
+  /* Rollup */
+  .rollup-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rollup-table th { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); text-align: right; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .rollup-table th:first-child { text-align: left; }
+  .rollup-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); text-align: right; vertical-align: top; }
+  .rollup-table td:first-child { text-align: left; font-weight: 500; }
+  .rollup-table tbody tr:hover td { background: var(--surface2); }
+  .rollup-table tr:last-child td { border-bottom: none; }
+  .cell-main { font-weight: 500; font-family: 'DM Mono', monospace; font-size: 13px; }
+  .cell-sub { font-size: 10px; color: var(--text-faint); margin-top: 2px; font-family: 'DM Mono', monospace; }
+  .cell-delta { font-size: 11px; font-weight: 500; margin-top: 3px; font-family: 'DM Mono', monospace; }
+  .cell-delta.up { color: var(--green); }
+  .cell-delta.dn { color: var(--red); }
+
+  .empty-note { font-size: 12px; color: var(--text-faint); padding: 1rem 0; }
+  .full-card { margin-bottom: 12px; }
+  .summary-text { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+
+  /* Pager */
+  .pager-row { display: flex; align-items: center; justify-content: space-between; padding-top: 1.25rem; border-top: 1px solid var(--border); margin-top: 0.5rem; flex-wrap: wrap; gap: 10px; }
+  .pager-info { font-size: 12px; color: var(--text-faint); font-family: 'DM Mono', monospace; }
+  .pager-actions { display: flex; gap: 7px; }
+  .pager-btn { font-size: 12px; padding: 6px 14px; border: 1px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text-muted); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .pager-btn:hover { background: var(--surface2); color: var(--text); }
+
+  @media (max-width: 700px) {
+    .two-col { grid-template-columns: 1fr; }
+    .rollup-table { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="app">
+    <div class="loading-screen">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading from Google Sheets…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SHEET_ID  = '12OOtave7xMEwiHfCLoeH3y391Ecexcq0IidY-HPBUCY';
+const SHEET_TABS = ['AU','NZ','MY','SG','TH'];
+const FLAG_MAP   = {AU:'🇦🇺',NZ:'🇳🇿',MY:'🇲🇾',SG:'🇸🇬',TH:'🇹🇭'};
+const NAME_MAP   = {AU:'Australia',NZ:'New Zealand',MY:'Malaysia',SG:'Singapore',TH:'Thailand'};
+const QUARTERS   = ['Q1 25','Q2 25','Q3 25','Q4 25','Q1 26'];
+const STREAM_COLORS = ['#ddeeff','#ddf5ec','#fef3e2','#f0eeff','#fdecea','#eaf5de','#fdf3e3','#f5f0fe'];
+
+let countries     = [];
+let activeCountry = 0;
+let activeSection = 0;
+let activeQ       = 'Q1 26';
+const initState   = {};
+
+// ── FETCH & PARSE ─────────────────────────────────────────────────────────────
+async function fetchSheet(tab) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Tab "${tab}" not accessible (HTTP ${res.status})`);
+  return parseCSV(await res.text());
+}
+
+function parseCSV(text) {
+  return text.trim().split('\n').map(line => {
+    const cells = []; let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cells.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    cells.push(cur.trim());
+    return cells;
+  });
+}
+
+function clean(s) {
+  return (s||'').replace(/^["'\u2018\u2019\s]+|["'\u2018\u2019\s]+$/g,'').trim();
+}
+
+function parseTab(rows, code) {
+  const metrics = [], initiatives = [], streams = [], tradeBars = [];
+  let block = null;
+  const SKIP = ['label','title','name','partner name','value','description','py value','% change','$ change','status','tag'];
+
+  for (const row of rows) {
+    const a  = clean(row[0]);
+    const au = a.toUpperCase().replace(/\s+/g,' ');
+    if (!a) continue;
+
+    if (au === 'METRICS')     { block = 'METRICS';     continue; }
+    if (au === 'INITIATIVES') { block = 'INITIATIVES'; continue; }
+    if (au === 'STREAMS')     { block = 'STREAMS';     continue; }
+    if (au === 'PARTNERS')    { block = 'PARTNERS';    continue; }
+    if (SKIP.includes(a.toLowerCase())) continue;
+
+    if (block === 'METRICS') {
+      const label = a, val = clean(row[1]), py = clean(row[2]),
+            dPct = clean(row[3]), dAbs = clean(row[4]);
+      if (label) metrics.push({ l:label, v:val, py, dPct, dAbs, up:!dPct.startsWith('-') });
+    }
+    if (block === 'INITIATIVES') {
+      const title = a, desc = clean(row[1]), status = normaliseStatus(clean(row[2]));
+      if (title) initiatives.push({ t:title, m:desc, s:status });
+    }
+    if (block === 'STREAMS') {
+      const name = a, desc = clean(row[1]), tag = clean(row[2]);
+      if (name) streams.push({ n:name, d:desc, tag });
+    }
+    if (block === 'PARTNERS') {
+      const name = a, val = clean(row[1]);
+      const raw = parseFloat(val.replace(/[^0-9.-]/g,'')) || 0;
+      if (name) tradeBars.push({ l:name, v:val, raw });
+    }
+  }
+
+  if (tradeBars.length) {
+    const max = Math.max(...tradeBars.map(b => b.raw));
+    tradeBars.forEach(b => b.p = max ? Math.round((b.raw/max)*100) : 0);
+  }
+
+  return {
+    code, name: NAME_MAP[code]||code, flag: FLAG_MAP[code]||'🏳️',
+    metrics, initiatives, streams, tradeBars,
+    rollup: buildRollup(metrics)
+  };
+}
+
+function buildRollup(metrics) {
+  const find = (...kws) => metrics.find(m => kws.some(k => m.l.toLowerCase().includes(k.toLowerCase())));
+  return {
+    net:   find('topline','net revenue','total revenue','net'),
+    gm:    find('gm $','gross margin $','gm$','gross profit'),
+    gmPct: find('gm %','gm%','gross margin %','margin %'),
+    yoy:   find('yoy','growth')
+  };
+}
+
+function normaliseStatus(s) {
+  s = s.toLowerCase();
+  if (s.includes('progress')||s==='wip'||s==='in progress') return 'progress';
+  if (s==='live'||s==='active') return 'live';
+  if (s.includes('complet')||s==='done') return 'done';
+  if (s==='paused'||s.includes('hold')) return 'paused';
+  return 'plan';
+}
+
+async function loadAll() {
+  const out = [];
+  for (const tab of SHEET_TABS) {
+    try {
+      const rows = await fetchSheet(tab);
+      if (rows.length > 1) out.push(parseTab(rows, tab));
+    } catch(e) { console.warn(`Skipping ${tab}:`, e.message); }
+  }
+  return out;
+}
+
+// ── INITIATIVE STATE ─────────────────────────────────────────────────────────
+function iKey(code, idx) { return `${code}_${idx}`; }
+function iData(code, idx, def) {
+  const k = iKey(code,idx);
+  if (!initState[k]) initState[k] = { status:def, notes:'', open:false };
+  return initState[k];
+}
+function saveNotes(code, idx, val) { iData(code,idx,'').notes = val; }
+function setStatus(code, idx, val, def) {
+  iData(code,idx,def).status = val;
+  const k = iKey(code,idx);
+  const s = document.getElementById('sel_'+k); if (s) s.className = 'init-status-select status-'+val;
+  const d = document.getElementById('dot_'+k); if (d) d.style.background = dotColor(val);
+}
+function toggleInit(code, idx, def) {
+  const d = iData(code,idx,def); d.open = !d.open;
+  const k = iKey(code,idx);
+  const b = document.getElementById('body_'+k); if (b) b.classList.toggle('open',d.open);
+  const c = document.getElementById('chev_'+k); if (c) c.classList.toggle('open',d.open);
+}
+function dotColor(s) {
+  return {live:'#0e7c55',progress:'#1a52e8',plan:'#a05c0a',done:'#9e9b93',paused:'#c0392b'}[s]||'#9e9b93';
+}
+const statusOpts = [{v:'live',l:'Live'},{v:'progress',l:'In Progress'},{v:'plan',l:'Planned'},{v:'done',l:'Complete'},{v:'paused',l:'Paused'}];
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function setQ(q) { activeQ=q; renderQuarterBtns(); }
+function setCountry(i) { activeCountry=i; renderTabs(); renderSection(); updatePager(); }
+function setSection(i) { activeSection=i; renderSectionNav(); renderSection(); updatePager(); }
+function prevCountry() { if(activeSection===3)return; setCountry((activeCountry-1+countries.length)%countries.length); }
+function nextCountry() { if(activeSection===3)return; setCountry((activeCountry+1)%countries.length); }
+
+function renderQuarterBtns() {
+  document.getElementById('quarterBtns').innerHTML = QUARTERS.map(q =>
+    `<button class="q-btn ${q===activeQ?'active':''}" onclick="setQ('${q}')">${q}</button>`).join('');
+}
+function renderTabs() {
+  document.getElementById('countryTabs').innerHTML = countries.map((c,i) =>
+    `<button class="c-tab ${i===activeCountry?'active':''}" onclick="setCountry(${i})"><span class="flag">${c.flag}</span>${c.name}</button>`).join('');
+}
+function renderSectionNav() {
+  ['Trade','Initiatives','Streams','APAC Rollup'].forEach((s,i) => {
+    document.getElementById('sectionNav').innerHTML = ['Trade','Initiatives','Streams','APAC Rollup'].map((s,i) =>
+      `<button class="s-tab ${i===activeSection?'active':''}" onclick="setSection(${i})">${s}</button>`).join('');
+  });
+}
+function renderSection() {
+  const c = countries[activeCountry];
+  const el = document.getElementById('content');
+  if (!el) return;
+  if (activeSection===0) renderTrade(c,el);
+  else if (activeSection===1) renderInitiatives(c,el);
+  else if (activeSection===2) renderStreams(c,el);
+  else renderRollup(el);
+}
+function updatePager() {
+  const p = document.getElementById('pagerInfo'); if(!p) return;
+  if (activeSection===3) p.textContent = 'All markets — APAC rollup';
+  else if (countries.length) { const c=countries[activeCountry]; p.textContent=`${c.flag} ${c.name} — ${activeCountry+1} of ${countries.length}`; }
+}
+
+// ── RENDER TRADE ──────────────────────────────────────────────────────────────
+function renderTrade(c, el) {
+  const metrics = c.metrics.length
+    ? c.metrics.map(m => `
+        <div class="metric">
+          <div class="metric-label">${m.l}</div>
+          <div class="metric-val">${m.v||'—'}</div>
+          ${m.py?`<div class="metric-py">PY: ${m.py}</div>`:''}
+          <div class="metric-deltas">
+            ${m.dPct?`<span class="delta-pill ${m.up?'delta-up':'delta-down'}">${m.dPct}</span>`:''}
+            ${m.dAbs?`<span class="delta-pill ${m.up?'delta-up':'delta-down'}">${m.dAbs}</span>`:''}
+          </div>
+        </div>`).join('')
+    : `<p class="empty-note">No metrics yet — add a METRICS block to the <strong>${c.code}</strong> tab in Google Sheets.</p>`;
+
+  const bars = c.tradeBars.length
+    ? c.tradeBars.map(b=>`
+        <div class="trade-bar-row">
+          <div class="trade-bar-label" title="${b.l}">${b.l}</div>
+          <div class="trade-bar-track"><div class="trade-bar-fill" style="width:${b.p}%"></div></div>
+          <div class="trade-bar-val">${b.v}</div>
+        </div>`).join('')
+    : `<p class="empty-note">Add a PARTNERS block to the sheet to show trading partners.</p>`;
+
+  el.innerHTML = `
+    <div class="metric-row">${metrics}</div>
+    <div class="two-col">
+      <div class="card"><div class="card-title">Top trading partners</div>${bars}</div>
+      <div class="card">
+        <div class="card-title">Summary — ${activeQ}</div>
+        <p class="summary-text">Data for ${c.name} loaded live from Google Sheets. Edit the <strong>${c.code}</strong> tab to update figures — hit <em>Refresh</em> to reload.</p>
+      </div>
+    </div>`;
+}
+
+// ── RENDER INITIATIVES ────────────────────────────────────────────────────────
+function renderInitiatives(c, el) {
+  if (!c.initiatives.length) {
+    el.innerHTML = `<div class="card full-card"><div class="card-title">Initiatives — ${c.name}</div><p class="empty-note">Add an INITIATIVES block to the <strong>${c.code}</strong> tab in Google Sheets.</p></div>`;
+    return;
+  }
+  const items = c.initiatives.map((i,idx) => {
+    const d = iData(c.code,idx,i.s), k = iKey(c.code,idx);
+    const opts = statusOpts.map(o=>`<option value="${o.v}" ${d.status===o.v?'selected':''}>${o.l}</option>`).join('');
+    return `
+      <div class="init-item">
+        <div class="init-header" onclick="toggleInit('${c.code}',${idx},'${i.s}')">
+          <div class="init-dot" id="dot_${k}" style="background:${dotColor(d.status)}"></div>
+          <div style="flex:1">
+            <div class="init-text">${i.t}</div>
+            ${i.m?`<div class="init-meta">${i.m}</div>`:''}
+          </div>
+          <div class="init-status-wrap" onclick="event.stopPropagation()">
+            <select id="sel_${k}" class="init-status-select status-${d.status}"
+              onchange="setStatus('${c.code}',${idx},this.value,'${i.s}')">${opts}</select>
+          </div>
+          <div class="init-chevron ${d.open?'open':''}" id="chev_${k}">▼</div>
+        </div>
+        <div class="init-body ${d.open?'open':''}" id="body_${k}">
+          <div class="init-notes-label">Notes</div>
+          <textarea class="init-notes" placeholder="Add notes, updates or context…"
+            oninput="saveNotes('${c.code}',${idx},this.value)">${d.notes}</textarea>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="card full-card"><div class="card-title">Active initiatives — ${c.name}</div><div class="initiative-list">${items}</div></div>`;
+}
+
+// ── RENDER STREAMS ────────────────────────────────────────────────────────────
+function renderStreams(c, el) {
+  if (!c.streams.length) {
+    el.innerHTML = `<div class="card full-card"><div class="card-title">Streams — ${c.name}</div><p class="empty-note">Add a STREAMS block to the <strong>${c.code}</strong> tab in Google Sheets.</p></div>`;
+    return;
+  }
+  const cards = c.streams.map((s,i)=>`
+    <div class="stream-card">
+      <div class="stream-icon" style="background:${STREAM_COLORS[i%STREAM_COLORS.length]}"></div>
+      <div class="stream-name">${s.n}</div>
+      <div class="stream-desc">${s.d}</div>
+      ${s.tag?`<div class="stream-tag">${s.tag}</div>`:''}
+    </div>`).join('');
+  el.innerHTML = `<div class="card full-card"><div class="card-title">Revenue & activity streams — ${c.name}</div><div class="stream-grid">${cards}</div></div>`;
+}
+
+// ── RENDER ROLLUP ─────────────────────────────────────────────────────────────
+function renderRollup(el) {
+  const cell = (m) => {
+    if (!m) return '<div class="cell-main" style="color:var(--text-faint)">—</div>';
+    const up = !m.dPct.startsWith('-');
+    return `<div class="cell-main">${m.v||'—'}</div>
+      ${m.py?`<div class="cell-sub">PY: ${m.py}</div>`:''}
+      ${m.dPct||m.dAbs?`<div class="cell-delta ${up?'up':'dn'}">${[m.dPct,m.dAbs].filter(Boolean).join(' · ')}</div>`:''}`;
+  };
+
+  const rows = countries.map(c=>`
+    <tr>
+      <td><span style="margin-right:7px">${c.flag}</span>${c.name}</td>
+      <td>${cell(c.rollup.net)}</td>
+      <td>${cell(c.rollup.gm)}</td>
+      <td>${cell(c.rollup.gmPct)}</td>
+      <td>${cell(c.rollup.yoy)}</td>
+    </tr>`).join('');
+
+  el.innerHTML = `
+    <div class="card full-card">
+      <div class="card-title">APAC region rollup — ${activeQ}</div>
+      <div style="overflow-x:auto">
+        <table class="rollup-table">
+          <thead><tr>
+            <th style="text-align:left">Market</th>
+            <th>Topline Net</th><th>GM</th><th>GM %</th><th>YoY Growth</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p style="font-size:11px;color:var(--text-faint);margin-top:12px;">Rollup auto-matches metric rows by label name from each country tab.</p>
+    </div>`;
+}
+
+// ── REFRESH ───────────────────────────────────────────────────────────────────
+async function refreshData() {
+  const btn = document.getElementById('refreshBtn');
+  if (btn) btn.classList.add('spinning');
+  try {
+    countries = await loadAll();
+    if (activeCountry >= countries.length) activeCountry = 0;
+    renderTabs(); renderSection(); updatePager();
+  } catch(e) { console.error(e); }
+  if (btn) btn.classList.remove('spinning');
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+(async () => {
+  try {
+    countries = await loadAll();
+    if (!countries.length) throw new Error(
+      'No tabs found with data. Make sure your Google Sheet has tabs named AU, NZ, MY, SG, or TH and is shared as "Anyone with the link → Viewer".'
+    );
+
+    document.getElementById('app').innerHTML = `
+      <div class="header">
+        <div class="header-left">
+          <div class="eyebrow">Quarterly Business Review</div>
+          <div class="page-title">APAC Territory Trade Hub</div>
+        </div>
+        <div class="header-right">
+          <div class="quarter-row" id="quarterBtns"></div>
+          <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
+            <span class="refresh-icon">↻</span> Refresh from Sheet
+          </button>
+        </div>
+      </div>
+      <div class="country-tabs" id="countryTabs"></div>
+      <div class="section-nav" id="sectionNav"></div>
+      <div id="content"></div>
+      <div class="pager-row">
+        <div class="pager-info" id="pagerInfo"></div>
+        <div class="pager-actions">
+          <button class="pager-btn" onclick="prevCountry()">← Prev</button>
+          <button class="pager-btn" onclick="nextCountry()">Next →</button>
+        </div>
+      </div>`;
+
+    renderQuarterBtns();
+    renderTabs();
+    renderSectionNav();
+    renderSection();
+    updatePager();
+
+  } catch(e) {
+    document.getElementById('app').innerHTML = `
+      <div class="header">
+        <div class="header-left">
+          <div class="eyebrow">Quarterly Business Review</div>
+          <div class="page-title">APAC Territory Trade Hub</div>
+        </div>
+      </div>
+      <div class="error-box">
+        <strong>Could not load sheet data</strong>
+        ${e.message}<br><br>
+        <strong>To fix this:</strong> Open your Google Sheet → click Share → change access to "Anyone with the link" set to Viewer → Save. Then reload this page.
+      </div>`;
+  }
+})();
+</script>
+</body>
+</html>
