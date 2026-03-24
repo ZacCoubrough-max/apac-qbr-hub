@@ -575,12 +575,9 @@ async function exportPptx() {
       const d = (m) => m && m.dPct ? m.dPct : '';
       return [
         { text: c.flag + ' ' + c.name, options:{ bold:true, color:'1a1917' } },
-        { text: v(r.net) + (d(r.net)?'
-'+d(r.net):''), options:{ color:'1a1917' } },
-        { text: v(r.gm) + (d(r.gm)?'
-'+d(r.gm):''), options:{ color:'1a1917' } },
-        { text: v(r.gmPct) + (d(r.gmPct)?'
-'+d(r.gmPct):''), options:{ color:'1a1917' } },
+        { text: v(r.net) + (d(r.net)?' '+d(r.net):''), options:{ color:'1a1917' } },
+        { text: v(r.gm) + (d(r.gm)?' '+d(r.gm):''), options:{ color:'1a1917' } },
+        { text: v(r.gmPct) + (d(r.gmPct)?' '+d(r.gmPct):''), options:{ color:'1a1917' } },
         { text: v(r.yoy), options:{ color: r.yoy && !r.yoy.dPct?.startsWith('-') ? C.green : C.red } }
       ];
     });
