@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>APAC Territory QBR Hub</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/libs/pptxgen.bundle.js"></script>
 <style>
   :root {
     --bg: #f7f6f2; --surface: #ffffff; --surface2: #f0efe9;
@@ -160,6 +161,9 @@
   .pager-actions { display: flex; gap: 7px; }
   .pager-btn { font-size: 12px; padding: 6px 14px; border: 1px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text-muted); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
   .pager-btn:hover { background: var(--surface2); color: var(--text); }
+  .export-btn { font-size: 12px; padding: 6px 14px; border: 1px solid var(--green); border-radius: var(--radius); background: var(--green-bg); color: var(--green); cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.15s; display: flex; align-items: center; gap: 5px; }
+  .export-btn:hover { background: var(--green); color: #fff; }
+  .export-btn:disabled { opacity: 0.6; cursor: wait; }
   @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } .rollup-table { font-size: 11px; } }
 </style>
 </head>
@@ -525,6 +529,224 @@ function renderRollup(el) {
   </div>`;
 }
 
+
+// ── EXPORT TO PPTX ────────────────────────────────────────────────────────────
+async function exportPptx() {
+  const btn = document.getElementById('exportBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Building…'; }
+
+  try {
+    const pres = new PptxGenJS();
+    pres.layout = 'LAYOUT_WIDE';
+    pres.title = 'APAC Territory QBR — ' + activeQ;
+
+    const C = { navy:'1E3A5F', navyLight:'2D5A8E', white:'FFFFFF', offwhite:'F7F6F2',
+                surface:'FFFFFF', muted:'6B6960', faint:'9E9B93',
+                green:'0E7C55', greenBg:'E6F5EE', red:'C0392B', redBg:'FDECEA',
+                amber:'A05C0A', accent:'1A52E8', accentBg:'EDF1FD', border:'E8E6E0' };
+
+    const ragColors = { green:'0E7C55', amber:'E8A000', red:'C0392B', grey:'9E9B93' };
+
+    // ── TITLE SLIDE ──────────────────────────────────────────────────────────
+    const title = pres.addSlide();
+    title.background = { color: C.navy };
+    title.addShape(pres.shapes.RECTANGLE, { x:0, y:4.8, w:13.3, h:2.7, fill:{ color: C.navyLight } });
+    title.addText('APAC Territory Trade Hub', { x:0.7, y:1.2, w:11.9, h:1.4, fontSize:52, bold:true, color:C.white, fontFace:'Calibri' });
+    title.addText('Quarterly Business Review — ' + activeQ, { x:0.7, y:2.7, w:11.9, h:0.6, fontSize:22, color:'CADCFC', fontFace:'Calibri', italic:true });
+    title.addText(new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'}), { x:0.7, y:5.2, w:11.9, h:0.5, fontSize:14, color:'CADCFC', fontFace:'Calibri' });
+    title.addText('CONFIDENTIAL', { x:0.7, y:5.8, w:11.9, h:0.4, fontSize:11, color:'CADCFC', fontFace:'Calibri', charSpacing:4 });
+
+    // ── APAC ROLLUP SLIDE ─────────────────────────────────────────────────────
+    const rollupSlide = pres.addSlide();
+    rollupSlide.background = { color: C.offwhite };
+    rollupSlide.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:13.3, h:0.9, fill:{ color: C.navy } });
+    rollupSlide.addText('APAC Region Rollup — ' + activeQ, { x:0.4, y:0, w:12, h:0.9, fontSize:20, bold:true, color:C.white, fontFace:'Calibri', valign:'middle', margin:0 });
+
+    const rollupHeaders = [
+      [{ text:'Market', options:{ bold:true, color:C.white } },
+       { text:'Topline Net', options:{ bold:true, color:C.white } },
+       { text:'GM', options:{ bold:true, color:C.white } },
+       { text:'GM %', options:{ bold:true, color:C.white } },
+       { text:'YoY Growth', options:{ bold:true, color:C.white } }]
+    ];
+    const rollupRows = countries.map(c => {
+      const r = c.rollup;
+      const v = (m) => m ? m.v || '—' : '—';
+      const d = (m) => m && m.dPct ? m.dPct : '';
+      return [
+        { text: c.flag + ' ' + c.name, options:{ bold:true, color:'1a1917' } },
+        { text: v(r.net) + (d(r.net)?'
+'+d(r.net):''), options:{ color:'1a1917' } },
+        { text: v(r.gm) + (d(r.gm)?'
+'+d(r.gm):''), options:{ color:'1a1917' } },
+        { text: v(r.gmPct) + (d(r.gmPct)?'
+'+d(r.gmPct):''), options:{ color:'1a1917' } },
+        { text: v(r.yoy), options:{ color: r.yoy && !r.yoy.dPct?.startsWith('-') ? C.green : C.red } }
+      ];
+    });
+
+    rollupSlide.addTable([...rollupHeaders, ...rollupRows], {
+      x:0.4, y:1.1, w:12.5, h:4.5,
+      colW:[3,2.4,2.4,2.4,2.3],
+      border:{ pt:0.5, color:C.border },
+      autoPage:false,
+      fontFace:'Calibri', fontSize:13,
+      rowH:0.55,
+      fill:{ color:C.surface },
+      align:'left', valign:'middle',
+    });
+
+    // Colour header row
+    rollupSlide.addShape(pres.shapes.RECTANGLE, { x:0.4, y:1.1, w:12.5, h:0.55, fill:{ color:C.navyLight } });
+    rollupSlide.addTable([rollupHeaders[0]], {
+      x:0.4, y:1.1, w:12.5, h:0.55,
+      colW:[3,2.4,2.4,2.4,2.3],
+      border:{ pt:0, color:C.navyLight },
+      fontFace:'Calibri', fontSize:13, bold:true,
+      color:C.white, fill:{ color:C.navyLight },
+      align:'left', valign:'middle',
+    });
+
+    // ── PER COUNTRY SLIDES ────────────────────────────────────────────────────
+    for (const c of countries) {
+      const rag = getRag(c.code);
+
+      // Country header slide
+      const cHeader = pres.addSlide();
+      cHeader.background = { color: C.navy };
+      cHeader.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:0.5, h:7.5, fill:{ color: ragColors[rag] || C.faint } });
+      cHeader.addText(c.flag, { x:0.8, y:1.0, w:2, h:1.5, fontSize:64 });
+      cHeader.addText(c.name, { x:0.8, y:2.4, w:11, h:1.2, fontSize:48, bold:true, color:C.white, fontFace:'Calibri' });
+      cHeader.addText(activeQ + ' QBR', { x:0.8, y:3.5, w:11, h:0.6, fontSize:20, color:'CADCFC', fontFace:'Calibri', italic:true });
+      const ragLabel = { green:'On Track', amber:'At Risk', red:'Off Track', grey:'No Status' }[rag];
+      cHeader.addShape(pres.shapes.ROUNDED_RECTANGLE, { x:0.8, y:4.3, w:1.8, h:0.45, fill:{ color: ragColors[rag] || C.faint }, rectRadius:0.1 });
+      cHeader.addText(ragLabel, { x:0.8, y:4.3, w:1.8, h:0.45, fontSize:13, bold:true, color:C.white, fontFace:'Calibri', align:'center', valign:'middle', margin:0 });
+
+      // Metrics slide
+      if (c.metrics.length) {
+        const mSlide = pres.addSlide();
+        mSlide.background = { color: C.offwhite };
+        mSlide.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:13.3, h:0.9, fill:{ color: C.navy } });
+        mSlide.addText(c.flag + ' ' + c.name + ' — Trade Metrics', { x:0.4, y:0, w:12, h:0.9, fontSize:18, bold:true, color:C.white, fontFace:'Calibri', valign:'middle', margin:0 });
+        mSlide.addText(activeQ, { x:11.5, y:0, w:1.4, h:0.9, fontSize:13, color:'CADCFC', fontFace:'Calibri', valign:'middle', align:'right', margin:0 });
+
+        const cols = Math.min(c.metrics.length, 4);
+        const cardW = 12.2 / cols;
+        c.metrics.forEach((m, i) => {
+          const x = 0.5 + (i % cols) * (cardW + 0.15);
+          const row = Math.floor(i / cols);
+          const y = 1.1 + row * 2.0;
+          const isUp = !m.dPct?.startsWith('-');
+          mSlide.addShape(pres.shapes.RECTANGLE, { x, y, w:cardW, h:1.8, fill:{ color:C.surface }, line:{ color:C.border, pt:0.5 } });
+          mSlide.addText(m.l.toUpperCase(), { x:x+0.15, y:y+0.12, w:cardW-0.3, h:0.28, fontSize:9, color:C.faint, fontFace:'Calibri', bold:true, charSpacing:1 });
+          mSlide.addText(m.v || '—', { x:x+0.15, y:y+0.38, w:cardW-0.3, h:0.55, fontSize:26, bold:true, color:'1a1917', fontFace:'Calibri' });
+          if (m.py) mSlide.addText('PY: ' + m.py, { x:x+0.15, y:y+0.92, w:cardW-0.3, h:0.25, fontSize:10, color:C.faint, fontFace:'Calibri' });
+          const dText = [m.dPct, m.dAbs].filter(Boolean).join('  ');
+          if (dText) {
+            mSlide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x:x+0.15, y:y+1.2, w:Math.min(cardW-0.3, 1.6), h:0.3, fill:{ color: isUp ? 'E6F5EE' : 'FDECEA' }, rectRadius:0.08, line:{ color: isUp ? 'E6F5EE' : 'FDECEA' } });
+            mSlide.addText(dText, { x:x+0.15, y:y+1.2, w:Math.min(cardW-0.3, 1.6), h:0.3, fontSize:10, bold:true, color: isUp ? C.green : C.red, fontFace:'Calibri', align:'center', valign:'middle', margin:0 });
+          }
+          if (m.target) mSlide.addText('Target: ' + m.target, { x:x+0.15, y:y+1.54, w:cardW-0.3, h:0.22, fontSize:9, color:C.faint, fontFace:'Calibri' });
+        });
+
+        // Summary narrative
+        const summaryKey = c.code + '_summary';
+        const summaryText = summaryNotes[summaryKey];
+        if (summaryText) {
+          mSlide.addShape(pres.shapes.RECTANGLE, { x:0.5, y:3.3, w:12.3, h:1.4, fill:{ color:'EDF1FD' }, line:{ color:'C7D7F7', pt:0.5 } });
+          mSlide.addText('Summary', { x:0.65, y:3.38, w:2, h:0.3, fontSize:9, bold:true, color:C.accent, fontFace:'Calibri', charSpacing:1 });
+          mSlide.addText(summaryText, { x:0.65, y:3.65, w:12, h:1.0, fontSize:12, color:'1a1917', fontFace:'Calibri', lineSpacingMultiple:1.2 });
+        }
+      }
+
+      // Initiatives slide
+      if (c.initiatives.length) {
+        const iSlide = pres.addSlide();
+        iSlide.background = { color: C.offwhite };
+        iSlide.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:13.3, h:0.9, fill:{ color: C.navy } });
+        iSlide.addText(c.flag + ' ' + c.name + ' — Initiatives', { x:0.4, y:0, w:12, h:0.9, fontSize:18, bold:true, color:C.white, fontFace:'Calibri', valign:'middle', margin:0 });
+
+        const statusColors = { live:{ bg:'E6F5EE', text:'0E7C55' }, progress:{ bg:'EDF1FD', text:'1A52E8' }, plan:{ bg:'FDF3E3', text:'A05C0A' }, done:{ bg:'F0EFE9', text:'9E9B93' }, paused:{ bg:'FDECEA', text:'C0392B' } };
+        const statusLabels = { live:'Live', progress:'In Progress', plan:'Planned', done:'Complete', paused:'Paused' };
+
+        c.initiatives.forEach((init, idx) => {
+          if (idx >= 6) return;
+          const col = idx % 2, row = Math.floor(idx / 2);
+          const x = 0.4 + col * 6.35, y = 1.1 + row * 1.6;
+          const data = iData(c.code, idx, init.s);
+          const sc = statusColors[data.status] || statusColors.plan;
+          const sl = statusLabels[data.status] || 'Planned';
+          const dotC = { live:'0E7C55', progress:'1A52E8', plan:'A05C0A', done:'9E9B93', paused:'C0392B' }[data.status] || 'A05C0A';
+
+          iSlide.addShape(pres.shapes.RECTANGLE, { x, y, w:6.1, h:1.45, fill:{ color:C.surface }, line:{ color:C.border, pt:0.5 } });
+          iSlide.addShape(pres.shapes.OVAL, { x:x+0.18, y:y+0.22, w:0.18, h:0.18, fill:{ color:dotC }, line:{ color:dotC } });
+          iSlide.addText(init.t, { x:x+0.45, y:y+0.12, w:4.8, h:0.4, fontSize:13, bold:true, color:'1a1917', fontFace:'Calibri' });
+          if (init.m) iSlide.addText(init.m, { x:x+0.45, y:y+0.5, w:4.8, h:0.35, fontSize:11, color:C.muted, fontFace:'Calibri' });
+          iSlide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x:x+0.45, y:y+0.95, w:1.3, h:0.28, fill:{ color:sc.bg }, rectRadius:0.08, line:{ color:sc.bg } });
+          iSlide.addText(sl, { x:x+0.45, y:y+0.95, w:1.3, h:0.28, fontSize:10, bold:true, color:sc.text, fontFace:'Calibri', align:'center', valign:'middle', margin:0 });
+
+          if (data.notes) {
+            iSlide.addText('Note: ' + data.notes.substring(0,80) + (data.notes.length>80?'…':''), { x:x+0.45, y:y+1.22, w:5.4, h:0.2, fontSize:9, color:C.faint, fontFace:'Calibri', italic:true });
+          }
+        });
+      }
+
+      // Streams slide
+      if (c.streams.length) {
+        const sSlide = pres.addSlide();
+        sSlide.background = { color: C.offwhite };
+        sSlide.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:13.3, h:0.9, fill:{ color: C.navy } });
+        sSlide.addText(c.flag + ' ' + c.name + ' — Revenue Streams', { x:0.4, y:0, w:12, h:0.9, fontSize:18, bold:true, color:C.white, fontFace:'Calibri', valign:'middle', margin:0 });
+
+        const streamBgColors = ['1A52E8','0E7C55','A05C0A','6B4DA0','C0392B','1A7A4A','C07A0A','4A3A8A'];
+        const cols3 = 3;
+        const cardW3 = 12.2 / cols3;
+        c.streams.forEach((s, i) => {
+          if (i >= 9) return;
+          const col = i % cols3, row = Math.floor(i / cols3);
+          const x = 0.4 + col * (cardW3 + 0.15), y = 1.1 + row * 2.0;
+          const bgColor = streamBgColors[i % streamBgColors.length];
+          sSlide.addShape(pres.shapes.RECTANGLE, { x, y, w:cardW3, h:1.8, fill:{ color:C.surface }, line:{ color:C.border, pt:0.5 } });
+          sSlide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x:x+0.15, y:y+0.12, w:0.45, h:0.45, fill:{ color:bgColor }, rectRadius:0.06, line:{ color:bgColor } });
+          sSlide.addText(s.n, { x:x+0.7, y:y+0.15, w:cardW3-0.85, h:0.38, fontSize:13, bold:true, color:'1a1917', fontFace:'Calibri', valign:'middle', margin:0 });
+          sSlide.addText(s.d, { x:x+0.15, y:y+0.65, w:cardW3-0.3, h:0.6, fontSize:11, color:C.muted, fontFace:'Calibri', lineSpacingMultiple:1.2 });
+          if (s.tag) {
+            sSlide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x:x+0.15, y:y+1.33, w:Math.min(cardW3-0.3, 1.8), h:0.28, fill:{ color:'F0EFE9' }, rectRadius:0.08, line:{ color:C.border } });
+            sSlide.addText(s.tag, { x:x+0.15, y:y+1.33, w:Math.min(cardW3-0.3, 1.8), h:0.28, fontSize:10, bold:true, color:C.muted, fontFace:'Calibri', align:'center', valign:'middle', margin:0 });
+          }
+        });
+      }
+
+      // Action items slide
+      const actions = getActions(c.code);
+      if (actions.length) {
+        const aSlide = pres.addSlide();
+        aSlide.background = { color: C.offwhite };
+        aSlide.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:13.3, h:0.9, fill:{ color: C.navy } });
+        aSlide.addText(c.flag + ' ' + c.name + ' — Action Items', { x:0.4, y:0, w:12, h:0.9, fontSize:18, bold:true, color:C.white, fontFace:'Calibri', valign:'middle', margin:0 });
+        const bulletItems = actions.map(a => ({ text: a.text, options:{ bullet:true, breakLine:true, color: a.done ? C.faint : '1a1917', strike: a.done } }));
+        if (bulletItems.length) bulletItems[bulletItems.length-1].options.breakLine = false;
+        aSlide.addText(bulletItems, { x:0.6, y:1.1, w:12.1, h:5.5, fontSize:14, fontFace:'Calibri', lineSpacingMultiple:1.4 });
+      }
+    }
+
+    // ── CLOSING SLIDE ─────────────────────────────────────────────────────────
+    const closing = pres.addSlide();
+    closing.background = { color: C.navy };
+    closing.addShape(pres.shapes.RECTANGLE, { x:0, y:2.8, w:13.3, h:2.0, fill:{ color: C.navyLight } });
+    closing.addText('Thank You', { x:0.7, y:1.0, w:11.9, h:1.2, fontSize:52, bold:true, color:C.white, fontFace:'Calibri', align:'center' });
+    closing.addText('APAC Territory QBR — ' + activeQ, { x:0.7, y:3.1, w:11.9, h:0.6, fontSize:18, color:'CADCFC', fontFace:'Calibri', align:'center', italic:true });
+
+    await pres.writeFile({ fileName: 'APAC_QBR_' + activeQ.replace(' ','_') + '.pptx' });
+
+  } catch(err) {
+    console.error('Export failed:', err);
+    alert('Export failed: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↓ Export to PowerPoint'; }
+  }
+}
+
 async function refreshData() {
   const btn=document.getElementById('refreshBtn'); if(btn) btn.classList.add('spinning');
   try { countries=await loadAll(); if(activeCountry>=countries.length) activeCountry=0; renderTabs(); renderSection(); updatePager(); }
@@ -544,7 +766,10 @@ async function refreshData() {
         </div>
         <div class="header-right">
           <div class="quarter-row" id="quarterBtns"></div>
-          <button class="refresh-btn" id="refreshBtn" onclick="refreshData()"><span class="refresh-icon">↻</span> Refresh from Sheet</button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="refresh-btn" id="refreshBtn" onclick="refreshData()"><span class="refresh-icon">↻</span> Refresh from Sheet</button>
+            <button class="export-btn" id="exportBtn" onclick="exportPptx()">↓ Export to PowerPoint</button>
+          </div>
         </div>
       </div>
       <div id="main-view">
