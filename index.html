@@ -137,6 +137,33 @@
   .stream-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
   .stream-tag { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; margin-top: 8px; font-weight: 500; font-family: 'DM Mono', monospace; background: var(--surface2); color: var(--text-muted); }
 
+  /* Stream detail page */
+  .stream-detail { display: none; }
+  .stream-detail.active { display: block; }
+  .main-view.hidden { display: none; }
+  .stream-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; flex-wrap: wrap; }
+  .back-btn { font-size: 12px; padding: 5px 12px; border: 1px solid var(--border-med); border-radius: var(--radius); background: var(--surface); color: var(--text-muted); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; display: flex; align-items: center; gap: 5px; }
+  .back-btn:hover { background: var(--surface2); color: var(--text); }
+  .stream-detail-icon { width: 40px; height: 40px; border-radius: var(--radius-lg); flex-shrink: 0; }
+  .stream-detail-title { font-size: 20px; font-weight: 500; color: var(--text); letter-spacing: -0.01em; }
+  .stream-detail-sub { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+  .stream-sections { display: flex; flex-direction: column; gap: 14px; }
+  .detail-section-title { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); margin-bottom: 14px; }
+  .kpi-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .kpi-table th { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  .kpi-table th:first-child { text-align: left; }
+  .kpi-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); text-align: right; font-family: 'DM Mono', monospace; font-size: 12px; }
+  .kpi-table td:first-child { text-align: left; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); }
+  .kpi-table tr:last-child td { border-bottom: none; }
+  .kpi-table tbody tr:hover td { background: var(--surface2); }
+  .kpi-ahead { color: var(--green); }
+  .kpi-behind { color: var(--red); }
+  .stream-notes-area { width: 100%; min-height: 120px; resize: vertical; font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--text); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; line-height: 1.6; outline: none; transition: border-color 0.15s; }
+  .stream-notes-area:focus { border-color: var(--accent); background: var(--surface); }
+  .stream-notes-area::placeholder { color: var(--text-faint); }
+  .stream-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; transition: all 0.15s; cursor: pointer; }
+  .stream-card:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+
   /* Rollup */
   .rollup-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .rollup-table th { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); text-align: right; padding: 8px 12px; border-bottom: 1px solid var(--border); }
@@ -425,6 +452,11 @@ function renderInitiatives(c, el) {
   el.innerHTML = `<div class="card full-card"><div class="card-title">Active initiatives — ${c.name}</div><div class="initiative-list">${items}</div></div>`;
 }
 
+// ── STREAM NOTES STATE ───────────────────────────────────────────────────────
+const streamNotes = {};
+function saveStreamNote(key, val) { streamNotes[key] = val; }
+function getStreamNote(key) { return streamNotes[key] || ''; }
+
 // ── RENDER STREAMS ────────────────────────────────────────────────────────────
 function renderStreams(c, el) {
   if (!c.streams.length) {
@@ -432,13 +464,111 @@ function renderStreams(c, el) {
     return;
   }
   const cards = c.streams.map((s,i)=>`
-    <div class="stream-card">
+    <div class="stream-card" onclick="openStream('${c.code}',${i})">
       <div class="stream-icon" style="background:${STREAM_COLORS[i%STREAM_COLORS.length]}"></div>
       <div class="stream-name">${s.n}</div>
       <div class="stream-desc">${s.d}</div>
       ${s.tag?`<div class="stream-tag">${s.tag}</div>`:''}
+      <div style="margin-top:10px;font-size:11px;color:var(--accent)">View detail →</div>
     </div>`).join('');
   el.innerHTML = `<div class="card full-card"><div class="card-title">Revenue & activity streams — ${c.name}</div><div class="stream-grid">${cards}</div></div>`;
+}
+
+// ── OPEN STREAM DETAIL ────────────────────────────────────────────────────────
+function openStream(countryCode, streamIdx) {
+  const c = countries.find(x => x.code === countryCode);
+  if (!c) return;
+  const s = c.streams[streamIdx];
+  const color = STREAM_COLORS[streamIdx % STREAM_COLORS.length];
+  const noteKey = `${countryCode}_stream_${streamIdx}`;
+
+  // hide main view, show detail
+  document.getElementById('main-view').classList.add('hidden');
+  const detail = document.getElementById('stream-detail');
+  detail.classList.add('active');
+
+  const noteVal = getStreamNote(noteKey);
+
+  detail.innerHTML = `
+    <div class="stream-detail-header">
+      <button class="back-btn" onclick="closeStream()">← Back to Streams</button>
+      <div class="stream-detail-icon" style="background:${color}"></div>
+      <div>
+        <div class="stream-detail-title">${s.n}</div>
+        <div class="stream-detail-sub">${c.name} · ${activeQ}${s.tag ? ' · ' + s.tag : ''}</div>
+      </div>
+    </div>
+
+    <div class="stream-sections">
+
+      <div class="card">
+        <div class="detail-section-title">Metrics</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">
+          <div class="metric"><div class="metric-label">Revenue</div><div class="metric-val">—</div><div class="metric-py">Coming from sheet</div></div>
+          <div class="metric"><div class="metric-label">GM £</div><div class="metric-val">—</div><div class="metric-py">Coming from sheet</div></div>
+          <div class="metric"><div class="metric-label">GM %</div><div class="metric-val">—</div><div class="metric-py">Coming from sheet</div></div>
+          <div class="metric"><div class="metric-label">YoY</div><div class="metric-val">—</div><div class="metric-py">Coming from sheet</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="detail-section-title">KPIs — Target vs Actual</div>
+        <table class="kpi-table">
+          <thead><tr>
+            <th style="text-align:left">KPI</th>
+            <th>Target</th>
+            <th>Actual</th>
+            <th>vs Target</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>Revenue</td><td class="kpi-neutral">—</td><td class="kpi-neutral">—</td><td class="kpi-neutral">—</td></tr>
+            <tr><td>Units / Volume</td><td class="kpi-neutral">—</td><td class="kpi-neutral">—</td><td class="kpi-neutral">—</td></tr>
+            <tr><td>GM %</td><td class="kpi-neutral">—</td><td class="kpi-neutral">—</td><td class="kpi-neutral">—</td></tr>
+            <tr><td>New Accounts</td><td class="kpi-neutral">—</td><td class="kpi-neutral">—</td><td class="kpi-neutral">—</td></tr>
+          </tbody>
+        </table>
+        <p class="empty-note" style="margin-top:10px">KPI data will pull from Google Sheets once connected.</p>
+      </div>
+
+      <div class="card">
+        <div class="detail-section-title">Initiatives</div>
+        <div class="initiative-list">
+          ${c.initiatives.length
+            ? c.initiatives.slice(0,3).map((i,idx) => {
+                const d = iData(c.code, idx, i.s), k = iKey(c.code, idx);
+                const opts = statusOpts.map(o=>`<option value="${o.v}" ${d.status===o.v?'selected':''}>${o.l}</option>`).join('');
+                return `
+                  <div class="init-item">
+                    <div class="init-header" onclick="toggleInit('${c.code}',${idx},'${i.s}')">
+                      <div class="init-dot" id="dot_sd_${k}" style="background:${dotColor(d.status)}"></div>
+                      <div style="flex:1"><div class="init-text">${i.t}</div>${i.m?`<div class="init-meta">${i.m}</div>`:''}</div>
+                      <div class="init-status-wrap" onclick="event.stopPropagation()">
+                        <select id="sel_sd_${k}" class="init-status-select status-${d.status}"
+                          onchange="setStatus('${c.code}',${idx},this.value,'${i.s}')">${opts}</select>
+                      </div>
+                    </div>
+                  </div>`;
+              }).join('')
+            : '<p class="empty-note">No initiatives found for this territory. Add them in the Initiatives tab.</p>'
+          }
+        </div>
+        <p style="font-size:11px;color:var(--text-faint);margin-top:12px;">Stream-specific initiatives will be filterable once sheet data is connected.</p>
+      </div>
+
+      <div class="card">
+        <div class="detail-section-title">Notes & Commentary</div>
+        <textarea class="stream-notes-area"
+          placeholder="Add notes, commentary, risks or context for this stream…"
+          oninput="saveStreamNote('${noteKey}', this.value)">${noteVal}</textarea>
+      </div>
+
+    </div>`;
+}
+
+function closeStream() {
+  document.getElementById('stream-detail').classList.remove('active');
+  document.getElementById('stream-detail').innerHTML = '';
+  document.getElementById('main-view').classList.remove('hidden');
 }
 
 // ── RENDER ROLLUP ─────────────────────────────────────────────────────────────
@@ -509,16 +639,19 @@ async function refreshData() {
           </button>
         </div>
       </div>
-      <div class="country-tabs" id="countryTabs"></div>
-      <div class="section-nav" id="sectionNav"></div>
-      <div id="content"></div>
-      <div class="pager-row">
-        <div class="pager-info" id="pagerInfo"></div>
-        <div class="pager-actions">
-          <button class="pager-btn" onclick="prevCountry()">← Prev</button>
-          <button class="pager-btn" onclick="nextCountry()">Next →</button>
+      <div id="main-view">
+        <div class="country-tabs" id="countryTabs"></div>
+        <div class="section-nav" id="sectionNav"></div>
+        <div id="content"></div>
+        <div class="pager-row">
+          <div class="pager-info" id="pagerInfo"></div>
+          <div class="pager-actions">
+            <button class="pager-btn" onclick="prevCountry()">← Prev</button>
+            <button class="pager-btn" onclick="nextCountry()">Next →</button>
+          </div>
         </div>
-      </div>`;
+      </div>
+      <div id="stream-detail" class="stream-detail"></div>`;
 
     renderQuarterBtns();
     renderTabs();
